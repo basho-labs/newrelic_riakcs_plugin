@@ -11,10 +11,9 @@ module RiakCSAgent
 
   class Metric
 
-    attr_accessor :key, :name, :unit, :arr_index, :processor
+    attr_reader :key, :name, :unit, :arr_index
 
     def initialize(key, name, unit, arr_index)
-      @processor = NewRelic::Processor::EpochCounter.new
       @key = key
       @name = name
       @unit = unit
@@ -25,7 +24,7 @@ module RiakCSAgent
 
   class Agent < NewRelic::Plugin::Agent::Base
     agent_guid 'com.basho.riak_cs_agent'
-    agent_version '0.1.0'
+    agent_version '0.2.0'
     agent_config_options :host, :port, :access_id, :secret_key
     agent_human_labels('RiakCS') { "#{host}:#{port}" }
 
@@ -128,10 +127,8 @@ module RiakCSAgent
     def poll_cycle
       stats = JSON.parse(riak_cs_get("http://#{host}:#{port}","/riak-cs/stats",access_id,secret_key))
 
-      for metric in @metrics
-        report_metric metric.name,
-                      metric.unit,
-                      metric.processor.process(stats[metric.key][metric.arr_index])
+      @metrics.each do |metric|
+        report_metric(metric.name, metric.unit, stats[metric.key][metric.arr_index])
       end
 
     end
